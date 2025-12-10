@@ -16,8 +16,8 @@ import os
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Get keys for your project from the project settings page: https://cloud.langfuse.com
-os.environ["LANGFUSE_PUBLIC_KEY"] = "pk-lf-5482da53-19ef-489a-9e47-dba29934a675" 
-os.environ["LANGFUSE_SECRET_KEY"] = "sk-lf-977527e2-3a92-4ebe-8051-d4bef80aa211" 
+os.environ["LANGFUSE_PUBLIC_KEY"] = "" 
+os.environ["LANGFUSE_SECRET_KEY"] = "" 
 os.environ["LANGFUSE_HOST"] = "https://cloud.langfuse.com" # 🇪🇺 EU region
 # os.environ["LANGFUSE_HOST"] = "https://us.cloud.langfuse.com" # 🇺🇸 US region
 
