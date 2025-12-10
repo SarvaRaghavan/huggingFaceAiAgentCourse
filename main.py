@@ -1,7 +1,121 @@
-from smolagents import LiteLLMModel
+from huggingface_hub import login
 
-model = LiteLLMModel(
-        model_id="ollama_chat/qwen2:7b",  # Or try other Ollama-supported models
-        api_base="http://127.0.0.1:11434",  # Default Ollama local server
-        num_ctx=8192,
-    )
+login()
+
+import numpy as np
+import time
+import datetime
+from langfuse import get_client
+
+from smolagents import CodeAgent, DuckDuckGoSearchTool, FinalAnswerTool, InferenceClientModel, Tool, tool, VisitWebpageTool
+
+import yaml
+import os
+
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Get keys for your project from the project settings page: https://cloud.langfuse.com
+os.environ["LANGFUSE_PUBLIC_KEY"] = "pk-lf-5482da53-19ef-489a-9e47-dba29934a675" 
+os.environ["LANGFUSE_SECRET_KEY"] = "sk-lf-977527e2-3a92-4ebe-8051-d4bef80aa211" 
+os.environ["LANGFUSE_HOST"] = "https://cloud.langfuse.com" # 🇪🇺 EU region
+# os.environ["LANGFUSE_HOST"] = "https://us.cloud.langfuse.com" # 🇺🇸 US region
+
+
+langfuse = get_client()
+
+if langfuse.auth_check():
+    print("Langfuse client is authenticated and ready!")
+else:
+    print("Authentication failed. Please check your credentials and host.")
+
+from openinference.instrumentation.smolagents import SmolagentsInstrumentor
+
+SmolagentsInstrumentor().instrument()
+
+def SuggestMenu(occasion: str) -> str:
+    """
+    Suggests a menu based on the occasion.
+    Args:
+        occasion: The type of occasion for the party.
+    """
+    if occasion == "casual":
+        return "Pizza, snacks, and drinks."
+    elif occasion == "formal":
+        return "3-course dinner with wine and dessert."
+    elif occasion == "superhero":
+        return "Buffet with high-energy and healthy food."
+    else:
+        return "Custom menu for the butler."
+
+
+def CateringServiceTool(query: str) -> str:
+    """
+    This tool returns the highest-rated catering service in Gotham City.
+    
+    Args:
+        query: A search term for finding catering services.
+    """
+    # Example list of catering services and their ratings
+    services = {
+        "Gotham Catering Co.": 4.9,
+        "Wayne Manor Catering": 4.8,
+        "Gotham City Events": 4.7,
+    }
+    
+    # Find the highest rated catering service (simulating search query filtering)
+    best_service = max(services, key=services.get)
+    
+    return best_service
+
+class SuperheroPartyThemeTool(Tool):
+    name = "superhero_party_theme_generator"
+    description = """
+    This tool suggests creative superhero-themed party ideas based on a category.
+    It returns a unique party theme idea."""
+    
+    inputs = {
+        "category": {
+            "type": "string",
+            "description": "The type of superhero party (e.g., 'classic heroes', 'villain masquerade', 'futuristic Gotham').",
+        }
+    }
+    
+    output_type = "string"
+
+    def forward(self, category: str):
+        themes = {
+            "classic heroes": "Justice League Gala: Guests come dressed as their favorite DC heroes with themed cocktails like 'The Kryptonite Punch'.",
+            "villain masquerade": "Gotham Rogues' Ball: A mysterious masquerade where guests dress as classic Batman villains.",
+            "futuristic Gotham": "Neo-Gotham Night: A cyberpunk-style party inspired by Batman Beyond, with neon decorations and futuristic gadgets."
+        }
+        
+        return themes.get(category.lower(), "Themed party idea not found. Try 'classic heroes', 'villain masquerade', or 'futuristic Gotham'.")
+
+
+with open(os.path.join(CURRENT_DIR, "prompts.yaml"), 'r') as stream:
+    prompt_templates = yaml.safe_load(stream)
+
+
+[]
+visit_webpage = VisitWebpageTool()
+suggest_menu = SuggestMenu()
+catering_service_tool = CateringServiceTool()
+superhero_party_theme_generator = SuperheroPartyThemeTool()
+# Alfred, the butler, preparing the menu for the party
+agent = CodeAgent(
+    tools=[
+        DuckDuckGoSearchTool(), 
+        visit_webpage,
+        suggest_menu,
+        catering_service_tool,
+        SuperheroPartyThemeTool(),
+	FinalAnswerTool()
+    ], 
+    model=InferenceClientModel(),
+    max_steps=10,
+    verbosity_level=2
+)
+
+agent.run("Give me the best playlist for a party at the Wayne's mansion. The party idea is a 'villain masquerade' theme")
+
